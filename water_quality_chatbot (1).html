@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a1628;
+  --surface:rgba(255,255,255,0.04);
+  --border:rgba(255,255,255,0.08);
+  --cyan:#00c6ff;
+  --blue:#0072ff;
+  --purple:#a855f7;
+  --indigo:#6366f1;
+  --green:#22c55e;
+  --red:#ef4444;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:#fff;min-height:100vh;overflow-x:hidden}
+
+/* ── BACKGROUND GRID ── */
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(0,198,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,198,255,.03) 1px,transparent 1px);
+  background-size:48px 48px;pointer-events:none;z-index:0
+}
+
+/* ════════════════════════════
+   LOGIN SCREEN
+════════════════════════════ */
+#loginScreen{
+  position:fixed;inset:0;z-index:100;
+  display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(ellipse 120% 80% at 50% 0%, rgba(0,114,255,.18) 0%, var(--bg) 60%);
+}
+.login-card{
+  position:relative;width:420px;max-width:90vw;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:20px;padding:40px 36px;
+  backdrop-filter:blur(24px);
+  box-shadow:0 32px 80px rgba(0,0,0,.5),0 0 0 1px rgba(0,198,255,.06) inset;
+}
+.login-glow{
+  position:absolute;top:-60px;left:50%;transform:translateX(-50%);
+  width:220px;height:120px;
+  background:radial-gradient(ellipse, rgba(0,198,255,.35) 0%, transparent 70%);
+  pointer-events:none;
+}
+.login-logo{
+  width:54px;height:54px;margin:0 auto 18px;
+  background:linear-gradient(135deg,var(--cyan),var(--blue));
+  border-radius:16px;display:flex;align-items:center;justify-content:center;
+  font-size:24px;
+  box-shadow:0 8px 24px rgba(0,198,255,.3);
+}
+.login-title{
+  font-family:'Syne',sans-serif;font-size:24px;font-weight:800;
+  text-align:center;margin-bottom:4px;
+  background:linear-gradient(135deg,#fff 40%,rgba(0,198,255,.8));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.login-sub{text-align:center;font-size:12px;color:rgba(255,255,255,.35);margin-bottom:30px;letter-spacing:.3px}
+
+.login-tabs{display:flex;background:rgba(255,255,255,.05);border-radius:10px;padding:3px;margin-bottom:24px}
+.ltab{flex:1;text-align:center;padding:8px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;color:rgba(255,255,255,.4);transition:all .2s}
+.ltab.active{background:linear-gradient(135deg,var(--cyan),var(--blue));color:#fff;box-shadow:0 4px 12px rgba(0,114,255,.3)}
+
+.lfield{margin-bottom:16px}
+.lfield label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:rgba(255,255,255,.4);margin-bottom:7px;font-weight:500}
+.lfield input{
+  width:100%;background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:10px;padding:11px 14px;
+  color:#fff;font-size:13px;outline:none;
+  font-family:'DM Sans',sans-serif;
+  transition:border .2s,box-shadow .2s;
+}
+.lfield input:focus{border-color:rgba(0,198,255,.5);box-shadow:0 0 0 3px rgba(0,198,255,.08)}
+.lfield input::placeholder{color:rgba(255,255,255,.2)}
+
+.login-btn{
+  width:100%;padding:13px;
+  background:linear-gradient(135deg,var(--cyan),var(--blue));
+  border:none;border-radius:10px;
+  color:#fff;font-size:14px;font-weight:600;
+  font-family:'Syne',sans-serif;letter-spacing:.3px;
+  cursor:pointer;margin-top:6px;
+  transition:transform .15s,box-shadow .2s;
+  box-shadow:0 6px 20px rgba(0,114,255,.3);
+}
+.login-btn:hover{transform:translateY(-1px);box-shadow:0 10px 28px rgba(0,114,255,.4)}
+.login-btn:active{transform:scale(.98)}
+
+#loginError{
+  display:none;text-align:center;font-size:12px;
+  color:#f87171;background:rgba(239,68,68,.1);
+  border:1px solid rgba(239,68,68,.2);
+  border-radius:8px;padding:9px;margin-top:12px;
+}
+.login-footer{text-align:center;font-size:11px;color:rgba(255,255,255,.2);margin-top:18px}
+
+/* Demo credentials hint */
+.demo-hint{
+  margin-top:14px;padding:10px 14px;
+  background:rgba(0,198,255,.06);border:1px solid rgba(0,198,255,.12);
+  border-radius:9px;font-size:11px;color:rgba(255,255,255,.4);
+  text-align:center;
+}
+.demo-hint strong{color:rgba(0,198,255,.8)}
+
+/* ════════════════════════════
+   MAIN APP (hidden until login)
+════════════════════════════ */
+#app{display:none;position:relative;z-index:1}
+
+.header{
+  background:rgba(255,255,255,.03);
+  border-bottom:1px solid var(--border);
+  padding:14px 24px;
+  display:flex;align-items:center;justify-content:space-between;
+  backdrop-filter:blur(12px);
+  position:sticky;top:0;z-index:10;
+}
+.hlogo{width:38px;height:38px;background:linear-gradient(135deg,var(--cyan),var(--blue));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;margin-right:10px;box-shadow:0 4px 12px rgba(0,114,255,.25)}
+.htitle{font-family:'Syne',sans-serif;font-size:17px;font-weight:700}
+.hsub{font-size:11px;color:rgba(255,255,255,.4);margin-top:1px}
+.hright{display:flex;align-items:center;gap:12px}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;flex-shrink:0}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.live-txt{font-size:11px;color:#4ade80}
+
+/* User badge in header */
+.user-badge{
+  display:flex;align-items:center;gap:7px;
+  background:rgba(255,255,255,.06);border:1px solid var(--border);
+  border-radius:20px;padding:5px 12px 5px 8px;
+  font-size:12px;color:rgba(255,255,255,.7);
+  cursor:pointer;transition:background .2s;
+}
+.user-badge:hover{background:rgba(255,255,255,.1)}
+.user-badge .av-sm{
+  width:22px;height:22px;border-radius:50%;
+  background:linear-gradient(135deg,var(--purple),var(--indigo));
+  display:flex;align-items:center;justify-content:center;font-size:11px;
+}
+.logout-btn{
+  background:none;border:none;color:rgba(255,255,255,.35);
+  font-size:11px;cursor:pointer;padding:2px 6px;border-radius:5px;
+  transition:color .2s;font-family:'DM Sans',sans-serif;
+}
+.logout-btn:hover{color:#f87171}
+
+.main{display:flex;gap:16px;padding:16px 20px;max-width:1100px;margin:auto}
+.left{flex:1.3;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.panel-hdr{padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.07);font-size:13px;font-weight:600;color:rgba(255,255,255,.6);display:flex;align-items:center;gap:6px;font-family:'Syne',sans-serif}
+#chatbox{flex:1;overflow-y:auto;padding:14px;min-height:320px;max-height:360px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.15) transparent}
+#chatbox::-webkit-scrollbar{width:3px}
+#chatbox::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:3px}
+.empty{text-align:center;padding:50px 20px;color:rgba(255,255,255,.25)}
+.empty-icon{font-size:36px;margin-bottom:10px}
+.empty p{font-size:12px;margin-top:4px}
+.msg-row{display:flex;margin-bottom:10px;align-items:flex-end;gap:7px}
+.msg-row.user{flex-direction:row-reverse}
+.av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.bot-av{background:linear-gradient(135deg,var(--cyan),var(--blue))}
+.user-av{background:linear-gradient(135deg,var(--purple),var(--indigo))}
+.bubble{max-width:78%;padding:9px 13px;border-radius:12px;font-size:13px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+.user .bubble{background:linear-gradient(135deg,#5b21b6,#4338ca);color:#fff;border-bottom-right-radius:3px}
+.bot .bubble.safe{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.25);color:#86efac;border-bottom-left-radius:3px}
+.bot .bubble.unsafe{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);color:#fca5a5;border-bottom-left-radius:3px}
+.bot .bubble.info{background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.25);color:#93c5fd;border-bottom-left-radius:3px}
+.badge{display:inline-block;font-size:9px;font-weight:700;padding:1px 7px;border-radius:20px;margin-bottom:4px;letter-spacing:.5px}
+.b-safe{background:rgba(34,197,94,.2);color:#4ade80}
+.b-unsafe{background:rgba(239,68,68,.2);color:#f87171}
+.b-info{background:rgba(59,130,246,.2);color:#93c5fd}
+.typing-bub{display:flex;gap:4px;padding:4px 2px}
+.typing-bub span{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.4);animation:blink 1.2s infinite}
+.typing-bub span:nth-child(2){animation-delay:.2s}
+.typing-bub span:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
+.quick-row{padding:10px 14px;border-top:1px solid rgba(255,255,255,.06);display:flex;flex-wrap:wrap;gap:6px}
+.qbtn{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.7);padding:4px 11px;border-radius:20px;font-size:11.5px;cursor:pointer;transition:all .18s}
+.qbtn:hover{background:rgba(255,255,255,.14);color:#fff;border-color:rgba(255,255,255,.25)}
+.qbtn.g:hover{background:rgba(34,197,94,.18);border-color:rgba(34,197,94,.35);color:#4ade80}
+.qbtn.r:hover{background:rgba(239,68,68,.18);border-color:rgba(239,68,68,.35);color:#f87171}
+.inp-row{padding:12px 14px;border-top:1px solid rgba(255,255,255,.07);display:flex;gap:8px;align-items:center}
+.inp-row input{flex:1;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:9px 13px;color:#fff;font-size:13px;outline:none;transition:border .2s;font-family:'DM Sans',sans-serif}
+.inp-row input::placeholder{color:rgba(255,255,255,.28)}
+.inp-row input:focus{border-color:rgba(0,198,255,.45)}
+.sbtn{width:38px;height:38px;background:linear-gradient(135deg,var(--cyan),var(--blue));border:none;border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:transform .15s;flex-shrink:0}
+.sbtn:hover{transform:scale(1.06)}
+.sbtn:active{transform:scale(.95)}
+.right{flex:.85;display:flex;flex-direction:column;gap:14px}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.scard{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:13px 15px;transition:transform .2s}
+.scard:hover{transform:translateY(-2px)}
+.slbl{font-size:10px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.7px;margin-bottom:5px}
+.sval{font-size:26px;font-weight:700;font-family:'Syne',sans-serif}
+.sunit{font-size:11px;color:rgba(255,255,255,.4);margin-top:2px}
+.ph-v{background:linear-gradient(135deg,var(--cyan),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.tds-v{background:linear-gradient(135deg,var(--purple),var(--indigo));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.status-bar{grid-column:span 2;padding:9px 13px;border-radius:9px;font-size:12.5px;font-weight:600;text-align:center;transition:all .3s;font-family:'Syne',sans-serif}
+.s-neutral{background:rgba(255,255,255,.05);border:1px solid var(--border);color:rgba(255,255,255,.35)}
+.s-safe{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.28);color:#4ade80}
+.s-unsafe{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.28);color:#f87171}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;flex:1}
+.chart-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.chart-ttl{font-size:12px;font-weight:600;color:rgba(255,255,255,.55);font-family:'Syne',sans-serif}
+.rbtn{background:rgba(255,255,255,.07);border:1px solid var(--border);color:rgba(255,255,255,.55);padding:4px 10px;border-radius:7px;font-size:11px;cursor:pointer;transition:all .2s}
+.rbtn:hover{background:rgba(255,255,255,.14);color:#fff}
+.hist-card{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.hist-inner{max-height:180px;overflow-y:auto;padding:10px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.15) transparent}
+.hist-item{padding:7px 10px;border-radius:7px;margin-bottom:5px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);font-size:11.5px}
+.hu{color:rgba(255,255,255,.45);margin-bottom:2px}
+.hb{color:rgba(255,255,255,.75)}
+
+/* Fade-in animation for app */
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.fade-in{animation:fadeUp .4s ease forwards}
+</style>
+</head>
+<body>
+
+<!-- ════════════ LOGIN SCREEN ════════════ -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-glow"></div>
+    <div class="login-logo">💧</div>
+    <div class="login-title">Water Quality Monitor</div>
+    <div class="login-sub">Real-time pH & TDS Analysis Platform</div>
+
+    <div class="login-tabs">
+      <div class="ltab active" id="tabSignIn" onclick="switchTab('signin')">Sign In</div>
+      <div class="ltab" id="tabSignUp" onclick="switchTab('signup')">Sign Up</div>
+    </div>
+
+    <!-- Sign In form -->
+    <div id="signinForm">
+      <div class="lfield">
+        <label>Email</label>
+        <input type="email" id="siEmail" placeholder="you@example.com" autocomplete="email" />
+      </div>
+      <div class="lfield">
+        <label>Password</label>
+        <input type="password" id="siPassword" placeholder="••••••••" autocomplete="current-password" />
+      </div>
+      <button class="login-btn" onclick="doSignIn()">Sign In →</button>
+    </div>
+
+    <!-- Sign Up form -->
+    <div id="signupForm" style="display:none">
+      <div class="lfield">
+        <label>Full Name</label>
+        <input type="text" id="suName" placeholder="Jane Doe" />
+      </div>
+      <div class="lfield">
+        <label>Email</label>
+        <input type="email" id="suEmail" placeholder="you@example.com" autocomplete="email" />
+      </div>
+      <div class="lfield">
+        <label>Password</label>
+        <input type="password" id="suPassword" placeholder="Min. 6 characters" autocomplete="new-password" />
+      </div>
+      <button class="login-btn" onclick="doSignUp()">Create Account →</button>
+    </div>
+
+    <div id="loginError"></div>
+
+    <div class="demo-hint">
+      Demo credentials — <strong>demo@water.ai</strong> / <strong>demo123</strong>
+    </div>
+    <div class="login-footer">By continuing you agree to our Terms & Privacy Policy</div>
+  </div>
+</div>
+
+<!-- ════════════ MAIN APP ════════════ -->
+<div id="app">
+  <div class="header">
+    <div style="display:flex;align-items:center">
+      <div class="hlogo">💧</div>
+      <div>
+        <div class="htitle">Water Quality Monitor</div>
+        <div class="hsub">Real-time pH & TDS Analysis</div>
+      </div>
+    </div>
+    <div class="hright">
+      <div class="live-dot"></div>
+      <span class="live-txt">AI Online</span>
+      <div class="user-badge" title="Logged in">
+        <div class="av-sm">👤</div>
+        <span id="headerUserName">User</span>
+        <button class="logout-btn" onclick="doLogout()">Logout</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="left">
+      <div class="panel-hdr">
+        <div class="live-dot"></div>
+        Live Analysis Chat
+      </div>
+      <div id="chatbox">
+        <div class="empty" id="emptyState">
+          <div class="empty-icon">💧</div>
+          <p style="color:rgba(255,255,255,.4);font-size:13px">Enter water parameters to analyze quality</p>
+          <p>Try: <em>ph 7.2 tds 180</em> or click a quick button</p>
+        </div>
+      </div>
+      <div class="quick-row">
+        <button class="qbtn g" onclick="quick('ph 7 tds 200')">✅ Safe sample</button>
+        <button class="qbtn r" onclick="quick('ph 9.5 tds 650')">⚠️ Unsafe sample</button>
+        <button class="qbtn" onclick="quick('ph 7 tds 200 range 6 9 500')">⚙️ Custom range</button>
+        <button class="qbtn" onclick="quick('tips')">💡 Water tips</button>
+        <button class="qbtn" onclick="showHistory()">📜 History</button>
+      </div>
+      <div class="inp-row">
+        <input id="input" placeholder="e.g. ph 7.2 tds 180  or  tips  or  hello" />
+        <button class="sbtn" onclick="send()">➤</button>
+      </div>
+    </div>
+
+    <div class="right">
+      <div class="stat-grid">
+        <div class="scard">
+          <div class="slbl">pH Level</div>
+          <div class="sval ph-v" id="statPh">—</div>
+          <div class="sunit">Safe: 6.5 – 8.5</div>
+        </div>
+        <div class="scard">
+          <div class="slbl">TDS</div>
+          <div class="sval tds-v" id="statTds">—</div>
+          <div class="sunit">Safe: &lt; 300 ppm</div>
+        </div>
+        <div class="status-bar s-neutral" id="statusBar">No reading yet</div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-hdr">
+          <span class="chart-ttl">📊 Reading history</span>
+          <button class="rbtn" onclick="renderChart()">↻ Refresh</button>
+        </div>
+        <canvas id="myChart" style="max-height:180px"></canvas>
+      </div>
+
+      <div class="hist-card" id="histCard" style="display:none">
+        <div class="panel-hdr" style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.07)">📜 Session history</div>
+        <div class="hist-inner" id="histInner"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ─── Auth state ─── */
+const DEMO_USER = {email:'demo@water.ai', password:'demo123', name:'Demo User'};
+let currentUser = null;
+
+// Simple in-memory "user store" (persisted to sessionStorage for this demo)
+function getUsers(){
+  try{ return JSON.parse(sessionStorage.getItem('wqUsers')||'[]'); }catch(e){ return []; }
+}
+function saveUsers(u){ sessionStorage.setItem('wqUsers',JSON.stringify(u)); }
+
+function switchTab(tab){
+  const isSignin = tab === 'signin';
+  document.getElementById('signinForm').style.display = isSignin ? '' : 'none';
+  document.getElementById('signupForm').style.display  = isSignin ? 'none' : '';
+  document.getElementById('tabSignIn').classList.toggle('active', isSignin);
+  document.getElementById('tabSignUp').classList.toggle('active', !isSignin);
+  clearError();
+}
+
+function showError(msg){
+  const el = document.getElementById('loginError');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function clearError(){ document.getElementById('loginError').style.display='none'; }
+
+function doSignIn(){
+  clearError();
+  const email    = document.getElementById('siEmail').value.trim().toLowerCase();
+  const password = document.getElementById('siPassword').value;
+  if(!email||!password){ showError('Please fill in all fields.'); return; }
+
+  // Check demo account
+  if(email === DEMO_USER.email && password === DEMO_USER.password){
+    loginSuccess({email, name: DEMO_USER.name}); return;
+  }
+  // Check registered users
+  const users = getUsers();
+  const found = users.find(u => u.email === email && u.password === password);
+  if(found){ loginSuccess(found); return; }
+
+  showError('Invalid email or password.');
+}
+
+function doSignUp(){
+  clearError();
+  const name     = document.getElementById('suName').value.trim();
+  const email    = document.getElementById('suEmail').value.trim().toLowerCase();
+  const password = document.getElementById('suPassword').value;
+  if(!name||!email||!password){ showError('Please fill in all fields.'); return; }
+  if(password.length < 6){ showError('Password must be at least 6 characters.'); return; }
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ showError('Please enter a valid email.'); return; }
+
+  const users = getUsers();
+  if(users.find(u => u.email === email) || email === DEMO_USER.email){
+    showError('An account with this email already exists.'); return;
+  }
+  users.push({name, email, password});
+  saveUsers(users);
+  loginSuccess({name, email});
+}
+
+function loginSuccess(user){
+  currentUser = user;
+  document.getElementById('loginScreen').style.display = 'none';
+  const app = document.getElementById('app');
+  app.style.display = 'block';
+  app.classList.add('fade-in');
+  document.getElementById('headerUserName').textContent = user.name || user.email.split('@')[0];
+}
+
+function doLogout(){
+  currentUser = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  // Reset chat state
+  readings.length = 0;
+  chatHistory.length = 0;
+  if(chartInst){ chartInst.destroy(); chartInst = null; }
+  const box = document.getElementById('chatbox');
+  box.innerHTML = '<div class="empty" id="emptyState"><div class="empty-icon">💧</div><p style="color:rgba(255,255,255,.4);font-size:13px">Enter water parameters to analyze quality</p><p>Try: <em>ph 7.2 tds 180</em> or click a quick button</p></div>';
+  document.getElementById('statPh').textContent='—';
+  document.getElementById('statTds').textContent='—';
+  document.getElementById('statusBar').className='status-bar s-neutral';
+  document.getElementById('statusBar').textContent='No reading yet';
+  document.getElementById('histCard').style.display='none';
+  document.getElementById('siEmail').value='';
+  document.getElementById('siPassword').value='';
+  clearError();
+}
+
+/* ─── Chat logic ─── */
+const readings    = [];
+const chatHistory = [];
+let chartInst     = null;
+
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>') }
+
+function localAnalyze(msg){
+  msg = msg.toLowerCase();
+  const nums = msg.match(/\d+\.?\d*/g)||[];
+  if(msg.includes('tip')){
+    const tips=[
+      "💧 Boil water before drinking to kill bacteria.",
+      "🧴 Use RO or UV filters for better purification.",
+      "🚰 Store water in clean, covered containers.",
+      "🧼 Clean water tanks regularly to avoid contamination.",
+      "🧪 Check pH and TDS levels regularly.",
+      "🔄 Replace filters periodically for best efficiency.",
+      "🥤 Avoid plastic containers for long-term storage.",
+      "🌡 Don't store water in direct sunlight."
+    ];
+    return {reply: tips[Math.floor(Math.random()*tips.length)], type:'info', ph:null, tds:null};
+  }
+  if(msg.includes('hello')||msg.includes('hi')){
+    return {reply:"Hello! 👋 I'm your water quality assistant. Send me readings like 'ph 7 tds 200' to analyze your water.", type:'info', ph:null, tds:null};
+  }
+  if(msg.includes('ph')&&nums.length>=2){
+    let ph=parseFloat(nums[0]),tds=parseFloat(nums[1]);
+    let minPh=6.5,maxPh=8.5,maxTds=300;
+    if(msg.includes('range')&&nums.length>=5){
+      minPh=parseFloat(nums[2]);maxPh=parseFloat(nums[3]);maxTds=parseFloat(nums[4]);
+    }
+    let phSafe = ph>=minPh&&ph<=maxPh;
+    let tdsSafe= tds<maxTds;
+    let phMsg  = phSafe ? `✅ pH is safe (${ph} within ${minPh}–${maxPh})` : `❌ pH is unsafe (${ph} outside ${minPh}–${maxPh})`;
+    let tdsMsg = tdsSafe? `✅ TDS is safe (${tds} ppm < ${maxTds})` : `❌ TDS is high (${tds} ppm exceeds ${maxTds})`;
+    let reply  = phMsg+'\n'+tdsMsg;
+    if(!phSafe||!tdsSafe){
+      reply+='\n\n💡 Suggestions:';
+      if(!phSafe) reply+=ph<minPh ? '\n➡ Low pH: Add alkaline substances (lime/baking soda).' : '\n➡ High pH: Use mild acidification or filtration.';
+      if(!tdsSafe) reply+='\n➡ High TDS: Use RO filter or distillation.';
+    }
+    const safe = phSafe&&tdsSafe;
+    return {reply, type: safe?'safe':'unsafe', ph, tds};
+  }
+  return {reply:"Use format: ph 7.2 tds 180\nOr try a quick button below!", type:'info', ph:null, tds:null};
+}
+
+async function send(){
+  const inp = document.getElementById('input');
+  const msg = inp.value.trim();
+  if(!msg) return;
+
+  document.getElementById('emptyState')?.remove();
+  const box = document.getElementById('chatbox');
+  box.innerHTML+=`<div class="msg-row user"><div class="bubble">${esc(msg)}</div><div class="av user-av">👤</div></div>`;
+
+  const tid='t'+Date.now();
+  box.innerHTML+=`<div class="msg-row bot" id="${tid}"><div class="av bot-av">💧</div><div class="bubble info"><div class="typing-bub"><span></span><span></span><span></span></div></div></div>`;
+  box.scrollTop=box.scrollHeight;
+  inp.value='';
+
+  let result;
+  try{
+    result = localAnalyze(msg);
+  }catch(e){
+    result = {reply:'⚠️ Analysis error: '+e.message, type:'unsafe', ph:null, tds:null};
+  }
+
+  document.getElementById(tid)?.remove();
+
+  const badge = result.type==='unsafe' ? '<span class="badge b-unsafe">UNSAFE</span><br>' :
+                result.type==='safe'   ? '<span class="badge b-safe">SAFE</span><br>' :
+                                          '<span class="badge b-info">INFO</span><br>';
+  box.innerHTML+=`<div class="msg-row bot"><div class="av bot-av">💧</div><div class="bubble ${result.type}">${badge}${esc(result.reply)}</div></div>`;
+  box.scrollTop=box.scrollHeight;
+
+  chatHistory.push({user:msg, bot:result.reply});
+  if(result.ph!==null){
+    document.getElementById('statPh').textContent=result.ph.toFixed(1);
+    document.getElementById('statTds').textContent=result.tds!=null?result.tds.toFixed(0)+'':'—';
+    const sb=document.getElementById('statusBar');
+    if(result.type==='safe'){sb.className='status-bar s-safe';sb.textContent='✅ Water quality is SAFE';}
+    else{sb.className='status-bar s-unsafe';sb.textContent='⚠️ Water quality is UNSAFE';}
+    readings.push({time:new Date().toLocaleTimeString('en',{hour:'2-digit',minute:'2-digit'}),ph:result.ph,tds:result.tds||0});
+    renderChart();
+  }
+}
+
+function quick(m){document.getElementById('input').value=m;send();}
+
+function renderChart(){
+  const data = readings.slice(-8);
+  if(!data.length) return;
+  const ctx  = document.getElementById('myChart').getContext('2d');
+  if(chartInst) chartInst.destroy();
+  chartInst = new Chart(ctx,{
+    type:'line',
+    data:{
+      labels:data.map(d=>d.time),
+      datasets:[
+        {label:'pH',data:data.map(d=>d.ph),yAxisID:'y1',borderColor:'#00c6ff',backgroundColor:'rgba(0,198,255,.08)',borderWidth:2,pointBackgroundColor:'#00c6ff',pointRadius:4,tension:.4,fill:true},
+        {label:'TDS (ppm)',data:data.map(d=>d.tds),yAxisID:'y2',borderColor:'#a855f7',backgroundColor:'rgba(168,85,247,.08)',borderWidth:2,pointBackgroundColor:'#a855f7',pointRadius:4,tension:.4,fill:true}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:true,animation:{duration:500},
+      plugins:{legend:{labels:{color:'rgba(255,255,255,.55)',font:{size:10}}}},
+      scales:{
+        y1:{type:'linear',position:'left',min:0,max:14,ticks:{color:'#00c6ff',font:{size:9}},grid:{color:'rgba(255,255,255,.05)'},title:{display:true,text:'pH',color:'#00c6ff',font:{size:10}}},
+        y2:{type:'linear',position:'right',min:0,max:1000,ticks:{color:'#a855f7',font:{size:9}},grid:{drawOnChartArea:false},title:{display:true,text:'TDS',color:'#a855f7',font:{size:10}}},
+        x:{ticks:{color:'rgba(255,255,255,.4)',font:{size:9},maxTicksLimit:6},grid:{color:'rgba(255,255,255,.04)'}}
+      }
+    }
+  });
+}
+
+function showHistory(){
+  const card=document.getElementById('histCard');
+  const inner=document.getElementById('histInner');
+  card.style.display='block';
+  inner.innerHTML='';
+  if(!chatHistory.length){inner.innerHTML='<p style="color:rgba(255,255,255,.3);font-size:12px;padding:8px">No history yet</p>';return;}
+  [...chatHistory].reverse().slice(0,10).forEach(h=>{
+    inner.innerHTML+=`<div class="hist-item"><div class="hu">You: ${esc(h.user)}</div><div class="hb">${esc(h.bot.substring(0,80))}${h.bot.length>80?'...':''}</div></div>`;
+  });
+}
+
+document.addEventListener('keypress', e=>{
+  if(e.key==='Enter' && document.getElementById('app').style.display!='none'){
+    const focused = document.activeElement;
+    if(focused && focused.id==='input') send();
+  }
+});
+
+// Allow Enter key on login fields
+['siEmail','siPassword'].forEach(id=>{
+  document.getElementById(id).addEventListener('keypress', e=>{ if(e.key==='Enter') doSignIn(); });
+});
+['suName','suEmail','suPassword'].forEach(id=>{
+  document.getElementById(id).addEventListener('keypress', e=>{ if(e.key==='Enter') doSignUp(); });
+});
+</script>
+</body>
+</html>
